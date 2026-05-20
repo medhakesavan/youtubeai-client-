@@ -36,7 +36,7 @@ const ChannelSelector = ({ channels, onSelect, selectedId }) => {
           ))}
           
           <button 
-            onClick={() => window.open('http://localhost:5000/auth', '_blank')}
+            onClick={() => window.open('https://youtubeai-server.onrender.com/auth', '_blank')}
             className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-700 hover:border-slate-500 transition-all text-slate-500 hover:text-slate-300"
           >
             <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mb-2">

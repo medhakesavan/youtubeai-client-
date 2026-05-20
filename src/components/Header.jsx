@@ -26,7 +26,7 @@ const Header = ({ toggleSidebar, onSearch, setActiveTab, sidebarOpen }) => {
   useEffect(() => {
     const fetchAIStatus = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/ai/status`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://youtubeai-server.onrender.com/api'}/ai/status`);
         const data = await res.json();
         setAiStatus(data);
       } catch (err) {

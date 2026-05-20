@@ -17,7 +17,7 @@ import ChannelSelector from './components/ChannelSelector';
 import Login from './components/Login';
 import { Settings } from './components/AdminModules';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://youtubeai-server.onrender.com/api';
 
 console.log("Client ID:", import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
@@ -125,7 +125,7 @@ function App() {
               <button 
                 onClick={() => {
                   setIsConnecting(true);
-                  window.location.href = 'http://localhost:5000/auth';
+                  window.location.href = 'https://youtubeai-server.onrender.com/auth';
                 }}
                 disabled={isConnecting}
                 className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all"

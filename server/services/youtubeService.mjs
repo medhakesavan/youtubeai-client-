@@ -5,7 +5,7 @@ export const getYouTubeAuth = () => {
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.REDIRECT_URI || `http://localhost:5000/auth/callback`
+    process.env.REDIRECT_URI || `https://youtubeai-server.onrender.com/auth/callback`
   );
 };
 

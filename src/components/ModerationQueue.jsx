@@ -28,7 +28,7 @@ const ModerationQueue = ({ onAction, searchQuery }) => {
   useEffect(() => {
     fetchComments();
 
-    const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
+    const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://youtubeai-server.onrender.com', {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,

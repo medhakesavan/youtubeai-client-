@@ -29,17 +29,31 @@ const PORT = process.env.PORT || 5000;
 
 const app = express();
 const server = http.createServer(app);
+const allowedOrigins = [FRONTEND_URL, 'https://youtubeclients.vercel.app', 'http://localhost:5174'];
 const io = new Server(server, {
   cors: {
-    origin: [FRONTEND_URL, 'https://youtubeclients.vercel.app', 'http://localhost:5174'],
+    origin: allowedOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   }
 });
 
 app.set('io', io);
 
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+};
+
 app.use(helmet());
-app.use(cors({ origin: [FRONTEND_URL, 'https://youtubeclients.vercel.app', 'http://localhost:5174'], credentials: true }));
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 

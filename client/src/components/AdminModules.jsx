@@ -6,7 +6,7 @@ import {
   Loader2Icon, ActivityIcon, UsersIcon
 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://youtubeai-server.onrender.com/api';
 
 // Reusable Empty State Component
 const EmptyState = ({ message, icon: Icon }) => (
