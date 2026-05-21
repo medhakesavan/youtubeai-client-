@@ -261,7 +261,7 @@ const App = () => {
                     </div>
                     
                     <div className="h-[250px] relative w-full">
-                      <ResponsiveContainer width="99%" height="100%">
+                      <ResponsiveContainer width="99%" height="100%" minWidth={100} minHeight={250}>
                         <PieChart width={250} height={250}>
                           <Pie
                             data={sentimentData.length > 0 ? sentimentData : [{name: 'Empty', value: 1}]}
