@@ -45,6 +45,7 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState(null);
   const [channels, setChannels] = useState([]);
+  const [selectedChannelId, setSelectedChannelId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -95,7 +96,8 @@ const App = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await api.get('/api/analytics');
+      const url = selectedChannelId ? `/api/analytics?channelId=${selectedChannelId}` : '/api/analytics';
+      const res = await api.get(url);
       setStats(res.data);
       if (res.data.activities) {
         setActivities(res.data.activities);
@@ -111,8 +113,38 @@ const App = () => {
     try {
       const res = await api.get('/api/youtube/channels');
       setChannels(res.data);
+      if (res.data.length > 0 && !selectedChannelId) {
+        setSelectedChannelId(res.data[0].channelId);
+      }
     } catch (err) {
       console.error('Fetch Channels Error:', err);
+    }
+  };
+
+  // Re-fetch analytics strictly for the selected channel whenever it changes
+  useEffect(() => {
+    if (user && !loading) {
+      fetchAnalytics();
+    }
+  }, [selectedChannelId]);
+
+  const disconnectChannel = async (id, name) => {
+    if(!window.confirm(`Are you sure you want to disconnect ${name}? All related comments and data will be removed from your dashboard.`)) return;
+    
+    try {
+      setLoading(true);
+      await api.delete(`/api/youtube/channels/${id}`);
+      setChannels(prev => prev.filter(c => c.channelId !== id));
+      if (selectedChannelId === id) {
+        setSelectedChannelId(null);
+        setActiveTab('channels');
+        fetchAnalytics(); // clear analytics
+      }
+    } catch (err) {
+      console.error('Disconnect error:', err);
+      alert('Failed to disconnect channel.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -175,9 +207,19 @@ const App = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
                   <div>
                     <h1 className="text-xl md:text-2xl font-black text-[#0f0f0f] tracking-tighter">Channel Dashboard</h1>
-                    <p className="text-[12px] md:text-[13px] text-[#606060] font-medium">Monitoring your audience engagement in real-time.</p>
+                    <p className="text-[12px] md:text-[13px] text-[#606060] font-medium">Monitoring emotional engagement across your content.</p>
                   </div>
                   <div className="flex items-center gap-2">
+                    {channels.length > 1 && (
+                      <select 
+                        value={selectedChannelId || ''} 
+                        onChange={(e) => setSelectedChannelId(e.target.value)}
+                        className="bg-white border border-[#e5e5e5] rounded-lg px-2 py-1.5 text-xs font-bold text-[#0f0f0f] shadow-sm outline-none cursor-pointer"
+                      >
+                        <option value="">All Channels</option>
+                        {channels.map(c => <option key={c.channelId} value={c.channelId}>{c.title}</option>)}
+                      </select>
+                    )}
                     <div className="bg-white border border-[#e5e5e5] rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-sm">
                       <Clock size={14} className="text-[#909090]" />
                       <span className="text-[12px] font-bold text-[#0f0f0f]">Last 30 Days</span>
@@ -394,7 +436,19 @@ const App = () => {
                 exit={{ opacity: 0, x: -20 }}
                 className="h-full flex flex-col"
               >
-                <VideosList channelId={channels[0]?.channelId} onAction={fetchAnalytics} searchQuery={searchQuery} />
+                {channels.length > 1 && (
+                  <div className="mb-4">
+                    <select 
+                      value={selectedChannelId || ''} 
+                      onChange={(e) => setSelectedChannelId(e.target.value)}
+                      className="bg-white border border-[#e5e5e5] rounded-lg px-3 py-2 text-sm font-bold text-[#0f0f0f] shadow-sm outline-none cursor-pointer"
+                    >
+                      <option value="" disabled>Select a Channel</option>
+                      {channels.map(c => <option key={c.channelId} value={c.channelId}>{c.title}</option>)}
+                    </select>
+                  </div>
+                )}
+                <VideosList channelId={selectedChannelId || channels[0]?.channelId} onAction={fetchAnalytics} searchQuery={searchQuery} />
               </motion.div>
             )}
 
@@ -440,17 +494,16 @@ const App = () => {
                       </div>
                       <div className="mt-6 pt-5 border-t border-[#f8f8f8] flex items-center justify-between">
                          <button 
-                           onClick={() => setActiveTab('settings')}
+                           onClick={() => {
+                             setSelectedChannelId(channel.channelId);
+                             setActiveTab('videos');
+                           }}
                            className="text-[13px] font-bold text-[#065fd4] hover:underline"
                          >
-                           Manage Settings
+                           View Videos
                          </button>
                          <button 
-                           onClick={() => {
-                             if(window.confirm(`Are you sure you want to disconnect ${channel.title}?`)) {
-                               alert('Disconnect feature requires backend endpoint update.');
-                             }
-                           }}
+                           onClick={() => disconnectChannel(channel.channelId, channel.title)}
                            className="text-[13px] font-bold text-[#909090] hover:text-[#d93025] transition-colors"
                          >
                            Disconnect
