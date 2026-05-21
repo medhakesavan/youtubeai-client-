@@ -36,7 +36,7 @@ const ChannelSelector = ({ channels, onSelect, selectedId }) => {
           ))}
           
           <button 
-            onClick={() => window.open((import.meta.env.VITE_API_URL || 'https://youtubeai-server.onrender.com/api').replace('/api', '/auth'), '_blank')}
+            onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth`, '_blank')}
             className="flex flex-col items-center justify-center p-6 rounded-xl border border-dashed border-[#e5e5e5] hover:border-[#cccccc] transition-all text-[#606060] hover:text-[#0f0f0f] bg-white"
           >
             <div className="w-12 h-12 rounded-full bg-[#f2f2f2] flex items-center justify-center mb-2">

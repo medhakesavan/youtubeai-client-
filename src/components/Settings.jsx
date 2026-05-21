@@ -45,7 +45,7 @@ const Settings = () => {
 
   const loadSettings = async () => {
     try {
-      const res = await api.get('/settings');
+      const res = await api.get('/api/settings');
       const { settings, youtubeApiKey, youtubeChannelId } = res.data;
       if (settings) {
         setAutoMod(settings.autoMod ?? true);
@@ -64,7 +64,7 @@ const Settings = () => {
 
   const fetchConnectedChannels = async () => {
     try {
-      const res = await api.get('/youtube/channels');
+      const res = await api.get('/api/youtube/channels');
       setConnectedChannels(res.data);
     } catch (err) {
       console.error('Failed to fetch channels:', err);
@@ -75,7 +75,7 @@ const Settings = () => {
     setSavingSettings(true);
     setGeneralSuccess(false);
     try {
-      await api.post('/settings', {
+      await api.post('/api/settings', {
         settings: {
           autoMod,
           confidenceThreshold: threshold,
@@ -98,7 +98,7 @@ const Settings = () => {
     setYtError('');
     setYtSuccess('');
     try {
-      const res = await api.post('/settings/youtube', {
+      const res = await api.post('/api/settings/youtube', {
         apiKey,
         channelId
       });
@@ -120,7 +120,7 @@ const Settings = () => {
     setYtError('');
     setYtSuccess('');
     try {
-      const res = await api.post('/settings/youtube', {
+      const res = await api.post('/api/settings/youtube', {
         apiKey: '',
         channelId: channelId || 'disconnect'
       });
@@ -401,7 +401,7 @@ const Settings = () => {
                 <button 
                   onClick={async () => {
                     try {
-                      await api.post('/comments/reanalyze', { sentimentFilter: 'neutral' });
+                      await api.post('/api/comments/reanalyze', { sentimentFilter: 'neutral' });
                       alert('Targeted re-analysis for Neutral comments started! Check dashboard for updates.');
                     } catch (err) {
                       alert('Failed to start targeted re-analysis.');
@@ -421,7 +421,7 @@ const Settings = () => {
                 <button 
                   onClick={async () => {
                     try {
-                      await api.post('/comments/reanalyze');
+                      await api.post('/api/comments/reanalyze');
                       alert('Full re-analysis started! This will run in the background.');
                     } catch (err) {
                       alert('Failed to start re-analysis.');
@@ -441,7 +441,7 @@ const Settings = () => {
                 <button 
                   onClick={async () => {
                     try {
-                      const res = await api.post('/comments/batch-like');
+                      const res = await api.post('/api/comments/batch-like');
                       alert(res.data.message || 'Batch auto-like started!');
                     } catch (err) {
                       alert(err.response?.data?.error || 'Failed to start batch auto-like.');

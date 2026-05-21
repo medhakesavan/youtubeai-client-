@@ -38,7 +38,7 @@ const VideosList = ({ channelId, onAction, searchQuery }) => {
   const fetchVideos = async () => {
     try {
       setLoadingVideos(true);
-      const res = await api.get('/youtube/videos', { params: { channelId } });
+      const res = await api.get('/api/youtube/videos', { params: { channelId } });
       const fetchedVideos = res.data.videos || [];
       setVideos(fetchedVideos);
       if (fetchedVideos.length > 0 && !selectedVideo) {
@@ -56,7 +56,7 @@ const VideosList = ({ channelId, onAction, searchQuery }) => {
     try {
       setSelectedVideo(videoId);
       setLoadingComments(true);
-      const res = await api.get(`/comments/${videoId}`, { params: { channelId } });
+      const res = await api.get(`/api/comments/${videoId}`, { params: { channelId } });
       setComments(res.data);
     } catch (err) {
       console.error('Error fetching comments:', err);
@@ -85,7 +85,7 @@ const VideosList = ({ channelId, onAction, searchQuery }) => {
         return updated;
       }));
 
-      const res = await api.post(`/comments/${id}/action`, { action });
+      const res = await api.post(`/api/comments/${id}/action`, { action });
       
       if (!res.data.success) {
         throw new Error(res.data.error || 'Action failed');
@@ -110,7 +110,7 @@ const VideosList = ({ channelId, onAction, searchQuery }) => {
     if (!selectedVideo) return;
     try {
       setLoadingComments(true);
-      await api.get(`/youtube/comments/analyze/${selectedVideo}`, { params: { channelId } });
+      await api.get(`/api/youtube/comments/analyze/${selectedVideo}`, { params: { channelId } });
       handleVideoSelect(selectedVideo);
     } catch (err) {
       console.error('Audit failed:', err);

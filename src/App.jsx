@@ -66,7 +66,7 @@ const App = () => {
       fetchAnalytics();
       fetchChannels();
       
-      const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://youtubeai-server.onrender.com', {
+      const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
         transports: ['websocket', 'polling'],
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,
@@ -95,7 +95,7 @@ const App = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await api.get('/analytics');
+      const res = await api.get('/api/analytics');
       setStats(res.data);
       if (res.data.activities) {
         setActivities(res.data.activities);
@@ -109,7 +109,7 @@ const App = () => {
 
   const fetchChannels = async () => {
     try {
-      const res = await api.get('/youtube/channels');
+      const res = await api.get('/api/youtube/channels');
       setChannels(res.data);
     } catch (err) {
       console.error('Fetch Channels Error:', err);
@@ -411,7 +411,7 @@ const App = () => {
                     <p className="text-[#606060] font-medium mt-1">Manage your linked YouTube accounts and moderation settings.</p>
                   </div>
                   <button 
-                    onClick={() => window.location.href = (import.meta.env.VITE_API_URL || 'https://youtubeai-server.onrender.com/api').replace('/api', '/auth')}
+                    onClick={() => window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth`}
                     className="yt-btn-primary"
                   >
                     <PlaySquare size={18} fill="currentColor" />
@@ -461,7 +461,7 @@ const App = () => {
 
                   {/* Empty State / Add Card */}
                   <button 
-                    onClick={() => window.location.href = (import.meta.env.VITE_API_URL || 'https://youtubeai-server.onrender.com/api').replace('/api', '/auth')}
+                    onClick={() => window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth`}
                     className="yt-card border-dashed border-[#cccccc] flex flex-col items-center justify-center gap-4 text-[#909090] hover:text-[#0f0f0f] hover:border-[#909090] bg-[#fcfcfc]"
                   >
                     <div className="w-12 h-12 rounded-full bg-[#f0f0f0] flex items-center justify-center">

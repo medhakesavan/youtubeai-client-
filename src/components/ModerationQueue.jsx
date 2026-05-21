@@ -28,7 +28,7 @@ const ModerationQueue = ({ onAction, searchQuery }) => {
   useEffect(() => {
     fetchComments();
 
-    const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://youtubeai-server.onrender.com', {
+    const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,
@@ -41,7 +41,7 @@ const ModerationQueue = ({ onAction, searchQuery }) => {
 
   const fetchComments = async () => {
     try {
-      const res = await api.get('/comments', {
+      const res = await api.get('/api/comments', {
         params: {
           sentiment: filter !== 'all' && ['positive', 'neutral', 'moderate', 'toxic'].includes(filter) ? filter : undefined,
           status: filter === 'deleted' ? 'deleted' : (filter === 'liked' ? undefined : undefined),
@@ -58,7 +58,7 @@ const ModerationQueue = ({ onAction, searchQuery }) => {
 
   const handleAction = async (id, action) => {
     try {
-      await api.post(`/comments/${id}/action`, { action });
+      await api.post(`/api/comments/${id}/action`, { action });
       fetchComments();
       if (onAction) onAction();
     } catch (err) {
@@ -77,7 +77,7 @@ const ModerationQueue = ({ onAction, searchQuery }) => {
 
   const saveEdit = async (id) => {
     try {
-      await api.patch(`/comments/${id}/edit`, editForm);
+      await api.patch(`/api/comments/${id}/edit`, editForm);
       setEditingId(null);
       fetchComments();
       if (onAction) onAction();

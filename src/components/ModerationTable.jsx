@@ -26,7 +26,7 @@ const ModerationTable = ({ onAction }) => {
   const fetchRecentComments = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/comments');
+      const res = await api.get('/api/comments');
       setComments(res.data);
     } catch (err) {
       console.error('Error fetching recent comments:', err);
@@ -37,7 +37,7 @@ const ModerationTable = ({ onAction }) => {
 
   const handleAction = async (id, action) => {
     try {
-      await api.post(`/comments/${id}/action`, { action });
+      await api.post(`/api/comments/${id}/action`, { action });
       fetchRecentComments();
       if (onAction) onAction();
     } catch (err) {

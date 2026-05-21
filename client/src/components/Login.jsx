@@ -83,7 +83,7 @@ const Login = ({ onLogin }) => {
 
         <div className="mt-6">
           <button 
-            onClick={() => window.location.href = 'https://youtubeai-server.onrender.com/auth'}
+            onClick={() => window.location.href = 'http://localhost:5000/auth'}
             className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-3"
           >
             <YoutubeIcon className="text-red-500" size={20} />
