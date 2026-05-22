@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api';
+import api from '../services/api';
 import { 
   PlaySquare, 
   MessageSquare, 
@@ -13,13 +13,23 @@ import {
   ExternalLink,
   ShieldAlert,
   ShieldCheck,
-  Search
+  Search,
+  LogOut
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getSentimentConfig, SENTIMENT_COLORS } from '../constants/sentimentColors';
+import { getSentimentConfig, SENTIMENT_COLORS } from '../utils/constants/sentimentColors';
 
-const VideosList = ({ channelId, onAction, searchQuery }) => {
+const VideosList = ({ 
+  channelId, 
+  onAction, 
+  searchQuery, 
+  isEmbedded = false, 
+  channels = [], 
+  selectedChannelId, 
+  setSelectedChannelId,
+  onLogout
+}) => {
   const [videos, setVideos] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -38,7 +48,7 @@ const VideosList = ({ channelId, onAction, searchQuery }) => {
   const fetchVideos = async () => {
     try {
       setLoadingVideos(true);
-      const res = await api.get('/api/youtube/videos', { params: { channelId } });
+      const res = await api.get('/youtube/videos', { params: { channelId } });
       const fetchedVideos = res.data.videos || [];
       setVideos(fetchedVideos);
       if (fetchedVideos.length > 0 && !selectedVideo) {
@@ -56,7 +66,7 @@ const VideosList = ({ channelId, onAction, searchQuery }) => {
     try {
       setSelectedVideo(videoId);
       setLoadingComments(true);
-      const res = await api.get(`/api/comments/${videoId}`, { params: { channelId } });
+      const res = await api.get(`/comments/${videoId}`, { params: { channelId } });
       setComments(res.data);
     } catch (err) {
       console.error('Error fetching comments:', err);
@@ -85,7 +95,7 @@ const VideosList = ({ channelId, onAction, searchQuery }) => {
         return updated;
       }));
 
-      const res = await api.post(`/api/comments/${id}/action`, { action });
+      const res = await api.post(`/comments/${id}/action`, { action });
       
       if (!res.data.success) {
         throw new Error(res.data.error || 'Action failed');
@@ -110,7 +120,7 @@ const VideosList = ({ channelId, onAction, searchQuery }) => {
     if (!selectedVideo) return;
     try {
       setLoadingComments(true);
-      await api.get(`/api/youtube/comments/analyze/${selectedVideo}`, { params: { channelId } });
+      await api.get(`/youtube/comments/analyze/${selectedVideo}`, { params: { channelId } });
       handleVideoSelect(selectedVideo);
     } catch (err) {
       console.error('Audit failed:', err);
@@ -157,15 +167,38 @@ const VideosList = ({ channelId, onAction, searchQuery }) => {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row h-full gap-4 md:gap-6 overflow-hidden">
+    <div className={`flex flex-col lg:flex-row h-full ${isEmbedded ? 'gap-2 lg:gap-4 bg-[#f9f9f9]' : 'gap-4 md:gap-6'} overflow-hidden`}>
       {/* Left Pane: Videos List */}
       <div className="w-full lg:w-[320px] flex flex-col gap-4 overflow-hidden shrink-0 h-[40%] lg:h-full">
-        <div className="yt-card !p-0 flex flex-col h-full overflow-hidden">
+        <div className={`yt-card !p-0 flex flex-col h-full overflow-hidden ${isEmbedded ? '!rounded-none !border-y-0 !border-l-0 !shadow-none' : ''}`}>
            <div className="p-4 md:p-5 border-b border-[#f0f0f0] flex items-center justify-between bg-white sticky top-0 z-10">
-              <h3 className="text-base md:text-lg font-black text-[#0f0f0f] tracking-tight">Channel Videos</h3>
-              <button onClick={fetchVideos} className="p-2 hover:bg-[#f2f2f2] rounded-full text-[#909090] transition-colors">
-                 <RefreshCw size={18} className={loadingVideos ? 'animate-spin' : ''} />
-              </button>
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <h3 className="text-base md:text-lg font-black text-[#0f0f0f] tracking-tight truncate">Channel Videos</h3>
+                {isEmbedded && channels.length > 1 && (
+                  <select 
+                    value={selectedChannelId || ''} 
+                    onChange={(e) => setSelectedChannelId(e.target.value)}
+                    className="bg-[#f9f9f9] border border-[#e5e5e5] rounded-lg px-2 py-1.5 text-xs font-bold text-[#0f0f0f] shadow-sm outline-none cursor-pointer max-w-[130px] truncate"
+                  >
+                    {channels.map(c => <option key={c.channelId} value={c.channelId}>{c.title}</option>)}
+                  </select>
+                )}
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button onClick={fetchVideos} className="p-2 hover:bg-[#f2f2f2] rounded-full text-[#909090] transition-colors" title="Refresh videos">
+                   <RefreshCw size={16} className={loadingVideos ? 'animate-spin' : ''} />
+                </button>
+                {isEmbedded && onLogout && (
+                  <button
+                    onClick={onLogout}
+                    title="Switch Account"
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold text-[#909090] hover:text-[#d93025] hover:bg-[#fce8e6] transition-all border border-transparent hover:border-[#d93025]/20"
+                  >
+                    <LogOut size={12} />
+                    <span>Switch</span>
+                  </button>
+                )}
+              </div>
            </div>
            
            <div className="flex-1 overflow-y-auto custom-scroll p-2">
@@ -197,7 +230,7 @@ const VideosList = ({ channelId, onAction, searchQuery }) => {
 
       {/* Right Pane: Analysis & Comments */}
       <div className="flex-1 flex flex-col gap-4 overflow-hidden h-[60%] lg:h-full">
-        <div className="yt-card !p-0 flex flex-col h-full overflow-hidden">
+        <div className={`yt-card !p-0 flex flex-col h-full overflow-hidden ${isEmbedded ? '!rounded-none !border-y-0 !border-r-0 !shadow-none' : ''}`}>
           {/* Header & Filters */}
           <div className="p-4 md:p-6 border-b border-[#f0f0f0] bg-white sticky top-0 z-20">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 md:mb-6">

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import axios from 'axios';
-import api from './api';
+import api, { API_BASE_URL } from './services/api';
 import { io } from 'socket.io-client';
 import { 
   MessageSquare, 
@@ -27,22 +27,33 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from './context/AuthContext';
-import { SENTIMENT_COLORS, SENTIMENT_ORDER, getSentimentConfig } from './constants/sentimentColors';
+import { SENTIMENT_COLORS, SENTIMENT_ORDER, getSentimentConfig } from './utils/constants/sentimentColors';
+
+// Import Pages (Lazy Loaded)
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const VideosPage = lazy(() => import('./pages/VideosPage'));
+const ChannelsPage = lazy(() => import('./pages/ChannelsPage'));
+const ModerationPage = lazy(() => import('./pages/ModerationPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const LeadsPage = lazy(() => import('./pages/LeadsPage'));
 
 // Components
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
-import StatsGrid from './components/StatsGrid';
-import ModerationQueue from './components/ModerationQueue';
-import VideosList from './components/VideosList';
-import Settings from './components/Settings';
 import Login from './components/Login';
 import Register from './components/Register';
 
 const App = () => {
   const { user, authLoading, logout } = useAuth();
   const [isRegistering, setIsRegistering] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    return queryParams.get('redirect') === 'comments' ? 'videos' : 'dashboard';
+  });
+  const [isEmbedded] = useState(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    return queryParams.get('embed') === 'true';
+  });
   const [stats, setStats] = useState(null);
   const [channels, setChannels] = useState([]);
   const [selectedChannelId, setSelectedChannelId] = useState(null);
@@ -67,7 +78,7 @@ const App = () => {
       fetchAnalytics();
       fetchChannels();
       
-      const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
+      const socket = io(API_BASE_URL, {
         transports: ['websocket', 'polling'],
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,
@@ -75,20 +86,14 @@ const App = () => {
       
       socket.on('live_activity', (activity) => {
         setActivities(prev => {
-          // Check for duplicates
           if (prev.find(a => (a._id || a.id) === (activity._id || activity.id))) return prev;
           const updated = [activity, ...prev];
-          return updated.slice(0, 10); // Keep only last 10
+          return updated.slice(0, 10);
         });
       });
 
-      socket.on('stats_updated', () => {
-        fetchAnalytics();
-      });
-
-      socket.on('new_comment_analyzed', () => {
-        fetchAnalytics();
-      });
+      socket.on('stats_updated', fetchAnalytics);
+      socket.on('new_comment_analyzed', fetchAnalytics);
       
       return () => socket.disconnect();
     }
@@ -96,12 +101,10 @@ const App = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const url = selectedChannelId ? `/api/analytics?channelId=${selectedChannelId}` : '/api/analytics';
+      const url = selectedChannelId ? `/analytics?channelId=${selectedChannelId}` : '/analytics';
       const res = await api.get(url);
       setStats(res.data);
-      if (res.data.activities) {
-        setActivities(res.data.activities);
-      }
+      if (res.data.activities) setActivities(res.data.activities);
     } catch (err) {
       console.error('Fetch Analytics Error:', err);
     } finally {
@@ -111,7 +114,7 @@ const App = () => {
 
   const fetchChannels = async () => {
     try {
-      const res = await api.get('/api/youtube/channels');
+      const res = await api.get('/youtube/channels');
       setChannels(res.data);
       if (res.data.length > 0 && !selectedChannelId) {
         setSelectedChannelId(res.data[0].channelId);
@@ -121,27 +124,22 @@ const App = () => {
     }
   };
 
-  // Re-fetch analytics strictly for the selected channel whenever it changes
   useEffect(() => {
-    if (user && !loading) {
-      fetchAnalytics();
-    }
+    if (user && !loading) fetchAnalytics();
   }, [selectedChannelId]);
 
   const disconnectChannel = async (id, name) => {
-    if(!window.confirm(`Are you sure you want to disconnect ${name}? All related comments and data will be removed from your dashboard.`)) return;
-    
+    if(!window.confirm(`Are you sure you want to disconnect ${name}? All related comments and data will be removed.`)) return;
     try {
       setLoading(true);
-      await api.delete(`/api/youtube/channels/${id}`);
+      await api.delete(`/youtube/channels/${id}`);
       setChannels(prev => prev.filter(c => c.channelId !== id));
       if (selectedChannelId === id) {
         setSelectedChannelId(null);
         setActiveTab('channels');
-        fetchAnalytics(); // clear analytics
+        fetchAnalytics();
       }
     } catch (err) {
-      console.error('Disconnect error:', err);
       alert('Failed to disconnect channel.');
     } finally {
       setLoading(false);
@@ -158,397 +156,95 @@ const App = () => {
   );
 
   if (!user) {
-    if (isRegistering) {
-      return <Register onSwitchToLogin={() => setIsRegistering(false)} />;
-    }
-    return <Login onSwitchToRegister={() => setIsRegistering(true)} />;
+    return isRegistering ? 
+      <Register onSwitchToLogin={() => setIsRegistering(false)} /> : 
+      <Login onSwitchToRegister={() => setIsRegistering(true)} />;
   }
 
-  const sentimentData = SENTIMENT_ORDER.map(sentimentKey => {
-    const cat = stats?.categories?.find(c => c._id === sentimentKey);
-    const config = SENTIMENT_COLORS[sentimentKey];
-    return {
-      name: config.label,
-      key: sentimentKey,
-      value: cat?.count || 0,
-      color: config.color
-    };
-  }).filter(data => data.value > 0);
+  const renderActiveTab = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <DashboardPage 
+          stats={stats} 
+          channels={channels} 
+          selectedChannelId={selectedChannelId}
+          setSelectedChannelId={setSelectedChannelId}
+          fetchAnalytics={fetchAnalytics}
+          loading={loading}
+          activities={activities}
+          searchQuery={searchQuery}
+        />;
+      case 'videos':
+        return <VideosPage 
+          channels={channels} 
+          user={user} 
+          selectedChannelId={selectedChannelId}
+          setSelectedChannelId={setSelectedChannelId}
+          fetchAnalytics={fetchAnalytics}
+          searchQuery={searchQuery}
+        />;
+      case 'channels':
+        return <ChannelsPage 
+          channels={channels} 
+          onDisconnect={disconnectChannel}
+          onAdd={() => window.location.href = `${API_BASE_URL}/auth`}
+          setActiveTab={setActiveTab}
+          setSelectedChannelId={setSelectedChannelId}
+        />;
+      case 'moderation':
+        return <ModerationPage channels={channels} onAction={fetchAnalytics} searchQuery={searchQuery} />;
+      case 'leads':
+        return <LeadsPage searchQuery={searchQuery} />;
+      case 'settings':
+        return <SettingsPage />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#f9f9f9]">
-      <Header 
-        toggleSidebar={toggleSidebar} 
-        onSearch={setSearchQuery} 
-        setActiveTab={setActiveTab}
-        sidebarOpen={sidebarOpen}
-      />
+      {!isEmbedded && (
+        <Header 
+          toggleSidebar={toggleSidebar} 
+          onSearch={setSearchQuery} 
+          setActiveTab={setActiveTab}
+          sidebarOpen={sidebarOpen}
+        />
+      )}
       
       <div className="flex flex-1 overflow-hidden relative">
-        <Sidebar 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
-          onLogout={logout} 
-          isOpen={sidebarOpen}
-          setIsOpen={setSidebarOpen}
-        />
+        {!isEmbedded && (
+          <Sidebar 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            onLogout={logout} 
+            isOpen={sidebarOpen}
+            setIsOpen={setSidebarOpen}
+          />
+        )}
         
-        <main className={`flex-1 overflow-y-auto custom-scroll p-4 md:p-6 lg:p-8 transition-all duration-300 ease-in-out`}>
+        <main className={`flex-1 ${isEmbedded ? 'overflow-hidden p-0' : 'overflow-y-auto p-4 md:p-6 lg:p-8'} custom-scroll transition-all duration-300 ease-in-out`}>
           <AnimatePresence mode="wait">
-            {activeTab === 'dashboard' && (
-              <motion.div 
-                key="dashboard"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="max-w-[1440px] mx-auto space-y-6 md:space-y-8"
-              >
-                {/* Welcome Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-                  <div>
-                    <h1 className="text-xl md:text-2xl font-black text-[#0f0f0f] tracking-tighter">Channel Dashboard</h1>
-                    <p className="text-[12px] md:text-[13px] text-[#606060] font-medium">Monitoring emotional engagement across your content.</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {channels.length > 1 && (
-                      <select 
-                        value={selectedChannelId || ''} 
-                        onChange={(e) => setSelectedChannelId(e.target.value)}
-                        className="bg-white border border-[#e5e5e5] rounded-lg px-2 py-1.5 text-xs font-bold text-[#0f0f0f] shadow-sm outline-none cursor-pointer"
-                      >
-                        <option value="">All Channels</option>
-                        {channels.map(c => <option key={c.channelId} value={c.channelId}>{c.title}</option>)}
-                      </select>
-                    )}
-                    <div className="bg-white border border-[#e5e5e5] rounded-lg px-3 py-1.5 flex items-center gap-2 shadow-sm">
-                      <Clock size={14} className="text-[#909090]" />
-                      <span className="text-[12px] font-bold text-[#0f0f0f]">Last 30 Days</span>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setLoading(true);
-                        fetchAnalytics();
-                        setTimeout(() => setLoading(false), 1000);
-                      }}
-                      className="yt-btn-primary !py-1.5 !px-4 !text-xs"
-                    >
-                      <Zap size={14} fill="currentColor" />
-                      Live Analysis
-                    </button>
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.2 }}
+              className="h-full"
+            >
+              <Suspense fallback={
+                <div className="h-full w-full flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="animate-spin text-[#ff0000]" size={40} />
+                    <p className="text-[12px] font-bold text-[#909090] uppercase tracking-widest">Loading Module...</p>
                   </div>
                 </div>
-
-                {/* Main Stats Grid */}
-                <StatsGrid stats={stats} />
-
-                {/* Charts & Analytics Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Sentiment Distribution */}
-                  <div className="yt-card lg:col-span-2 !p-5">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h3 className="text-base font-bold text-[#0f0f0f]">Sentiment Distribution</h3>
-                        <p className="text-[11px] text-[#909090] font-medium">Emotional engagement overview</p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {sentimentData.map((entry) => (
-                          <div key={entry.key} className="flex items-center gap-1 px-1.5 py-0.5 bg-[#f9f9f9] rounded-md border border-[#f0f0f0]">
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                            <span className="text-[9px] font-bold text-[#606060] uppercase">{entry.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="h-[250px] relative w-full">
-                      <ResponsiveContainer width="99%" height="100%" minWidth={100} minHeight={250}>
-                        <PieChart width={250} height={250}>
-                          <Pie
-                            data={sentimentData.length > 0 ? sentimentData : [{name: 'Empty', value: 1}]}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={75}
-                            outerRadius={100}
-                            paddingAngle={8}
-                            cornerRadius={6}
-                            dataKey="value"
-                            animationBegin={0}
-                            animationDuration={1200}
-                            stroke="none"
-                          >
-                            {sentimentData.map((entry) => (
-                              <Cell 
-                                key={`cell-${entry.key}`} 
-                                fill={entry.color}
-                                className="focus:outline-none"
-                              />
-                            ))}
-                            {sentimentData.length === 0 && <Cell fill="#f2f2f2" />}
-                          </Pie>
-                          <Tooltip 
-                            contentStyle={{ 
-                              borderRadius: '16px', 
-                              border: 'none', 
-                              boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
-                              padding: '12px 16px'
-                            }}
-                            itemStyle={{ fontWeight: '800', fontSize: '12px', textTransform: 'uppercase' }}
-                            cursor={{ fill: 'transparent' }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-4xl font-black text-[#0f0f0f] tracking-tighter leading-none">{stats?.totalComments || 0}</span>
-                        <span className="text-[10px] font-bold text-[#909090] uppercase tracking-widest mt-1.5">Comments</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Live Moderation Feed */}
-                  <div className="yt-card !p-5">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="text-[#2ba640]" size={18} />
-                        <h3 className="text-base font-bold text-[#0f0f0f]">Live Feed</h3>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-[#ff0000] animate-pulse"></div>
-                        <span className="text-[10px] font-black text-[#ff0000] uppercase tracking-tighter">Live</span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-3 min-h-[200px]">
-                      {activities.filter(a => a.text.toLowerCase().includes(searchQuery.toLowerCase()) || a.author?.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-8">
-                          <Activity size={32} className="mb-2" />
-                          <p className="text-[11px] font-bold">No matching activities...</p>
-                        </div>
-                      ) : (
-                        activities
-                          .filter(a => a.text.toLowerCase().includes(searchQuery.toLowerCase()) || a.author?.toLowerCase().includes(searchQuery.toLowerCase()))
-                          .map((activity, index) => (
-                          <motion.div 
-                            key={activity._id || activity.id || activity.youtubeId || `act-${index}`}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="p-3 bg-[#f8f8f8] border border-[#f0f0f0] rounded-xl"
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                {activity.type === 'delete' ? (
-                                  <Trash2 size={12} className="text-[#d93025]" />
-                                ) : activity.deleteFailed ? (
-                                  <ShieldAlert size={12} className="text-[#d93025]" />
-                                ) : activity.type === 'like' ? (
-                                  <ThumbsUp size={12} className="text-[#065fd4]" />
-                                ) : (activity.likeStatus === 'failed' || activity.likeStatus === 'not_supported') ? (
-                                  <ShieldAlert size={12} className="text-[#d93025]" />
-                                ) : activity.sentiment === 'positive' ? (
-                                  <ThumbsUp size={12} className="text-[#065fd4]" />
-                                ) : activity.sentiment === 'toxic' ? (
-                                  <ShieldAlert size={12} className="text-[#d93025]" />
-                                ) : (
-                                  <Clock size={12} className="text-[#909090]" />
-                                )}
-                                <span className={`text-[10px] font-black uppercase ${
-                                  activity.type === 'delete' ? 'text-[#d93025]' : 
-                                  activity.deleteFailed ? 'text-[#d93025]' :
-                                  activity.type === 'like' ? 'text-[#065fd4]' :
-                                  (activity.likeStatus === 'failed' || activity.likeStatus === 'not_supported') ? 'text-[#d93025]' :
-                                  activity.sentiment === 'positive' ? 'text-[#065fd4]' :
-                                  activity.sentiment === 'toxic' ? 'text-[#d93025]' : 'text-[#606060]'
-                                }`}>
-                                   {activity.type === 'delete' ? 'Auto-Deleted' : 
-                                    activity.deleteFailed ? 'Delete Failed' :
-                                    activity.type === 'like' ? 'Auto-Liked' : 
-                                    (activity.likeStatus === 'failed' || activity.likeStatus === 'not_supported') ? 'Like Failed' :
-                                    activity.sentiment === 'positive' ? 'AI Approved' :
-                                    activity.sentiment === 'toxic' ? 'Toxic Detected' : 
-                                    activity.sentiment === 'moderate' ? 'Moderate Risk' : 'Neutral'}
-                                 </span>
-                              </div>
-                              <span className="text-[9px] font-bold text-[#606060] bg-white px-2 py-0.5 rounded-full border border-[#f0f0f0]">
-                                {Math.round((activity.confidence || 0) * 100)}%
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-[#606060] line-clamp-1 italic">"{activity.text}"</p>
-                          </motion.div>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="mt-6 p-4 bg-[#fff8e1] border border-[#ffe082] rounded-xl flex items-start gap-3">
-                      <div className="bg-[#f9ab00] p-1.5 rounded-lg text-white flex-shrink-0">
-                        <AlertTriangle size={14} />
-                      </div>
-                      <p className="text-[10px] font-medium text-[#795548] leading-tight">
-                        <b>AI Status:</b> Monitoring English, Tamil & Tanglish comments. {stats?.pendingModeration || 0} flagged for review.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* New Insights Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="yt-card !p-5">
-                    <h3 className="text-base font-bold text-[#0f0f0f] mb-4">Language Breakdown</h3>
-                    <div className="space-y-4">
-                      {stats?.languages?.map((lang) => (
-                        <div key={lang._id} className="space-y-1.5">
-                          <div className="flex justify-between text-[11px] font-bold">
-                            <span className="text-[#606060] uppercase tracking-wider">{lang._id}</span>
-                            <span className="text-[#0f0f0f]">{lang.count} comments</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-[#f0f0f0] rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-[#ff0000]" 
-                              style={{ width: `${(lang.count / stats.totalComments) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="yt-card !p-5">
-                    <h3 className="text-base font-bold text-[#0f0f0f] mb-4">Top Word Categories</h3>
-                    <div className="flex flex-wrap gap-3">
-                      {stats?.topCategories?.map((cat) => (
-                        <div key={cat._id} className="flex flex-col items-center gap-1 bg-[#f9f9f9] border border-[#f0f0f0] p-4 rounded-2xl min-w-[100px] flex-1">
-                          <span className="text-[20px] font-black text-[#ff0000]">{cat.count}</span>
-                          <span className="text-[10px] font-black text-[#909090] uppercase tracking-tighter">{cat._id}</span>
-                        </div>
-                      ))}
-                      {(!stats?.topCategories || stats.topCategories.length === 0) && (
-                        <p className="text-[11px] text-[#909090] italic">Awaiting more comment data for categorization...</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {activeTab === 'videos' && (
-              <motion.div 
-                key="videos"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="h-full flex flex-col"
-              >
-                {channels.length > 1 && (
-                  <div className="mb-4">
-                    <select 
-                      value={selectedChannelId || ''} 
-                      onChange={(e) => setSelectedChannelId(e.target.value)}
-                      className="bg-white border border-[#e5e5e5] rounded-lg px-3 py-2 text-sm font-bold text-[#0f0f0f] shadow-sm outline-none cursor-pointer"
-                    >
-                      <option value="" disabled>Select a Channel</option>
-                      {channels.map(c => <option key={c.channelId} value={c.channelId}>{c.title}</option>)}
-                    </select>
-                  </div>
-                )}
-                <VideosList channelId={selectedChannelId || channels[0]?.channelId} onAction={fetchAnalytics} searchQuery={searchQuery} />
-              </motion.div>
-            )}
-
-            {activeTab === 'channels' && (
-              <motion.div 
-                key="channels"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="max-w-[1200px] mx-auto space-y-8"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-3xl font-black text-[#0f0f0f] tracking-tighter">Connected Channels</h1>
-                    <p className="text-[#606060] font-medium mt-1">Manage your linked YouTube accounts and moderation settings.</p>
-                  </div>
-                  <button 
-                    onClick={() => window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth`}
-                    className="yt-btn-primary"
-                  >
-                    <PlaySquare size={18} fill="currentColor" />
-                    Add Channel
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {channels.map((channel) => (
-                    <div key={channel.channelId} className="yt-card group hover:border-[#ff0000]/30 transition-all">
-                      <div className="flex items-start gap-4">
-                        <div className="w-16 h-16 rounded-full bg-[#f9f9f9] border border-[#f0f0f0] overflow-hidden flex-shrink-0">
-                          <img src={channel.thumbnail || `https://ui-avatars.com/api/?name=${channel.title}&background=f0f0f0`} alt="" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-lg font-black text-[#0f0f0f] truncate">{channel.title}</h3>
-                          <p className="text-[12px] font-bold text-[#909090] mt-0.5">ID: {channel.channelId.substring(0, 12)}...</p>
-                          <div className="mt-4 flex items-center gap-3">
-                             <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#2ba640] bg-[#e6f4ea] px-2.5 py-1 rounded-full">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#2ba640] animate-pulse"></div>
-                                Active
-                             </div>
-                             <span className="text-[11px] font-bold text-[#909090] uppercase tracking-widest">Scanning Live</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-6 pt-5 border-t border-[#f8f8f8] flex items-center justify-between">
-                         <button 
-                           onClick={() => {
-                             setSelectedChannelId(channel.channelId);
-                             setActiveTab('videos');
-                           }}
-                           className="text-[13px] font-bold text-[#065fd4] hover:underline"
-                         >
-                           View Videos
-                         </button>
-                         <button 
-                           onClick={() => disconnectChannel(channel.channelId, channel.title)}
-                           className="text-[13px] font-bold text-[#909090] hover:text-[#d93025] transition-colors"
-                         >
-                           Disconnect
-                         </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Empty State / Add Card */}
-                  <button 
-                    onClick={() => window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth`}
-                    className="yt-card border-dashed border-[#cccccc] flex flex-col items-center justify-center gap-4 text-[#909090] hover:text-[#0f0f0f] hover:border-[#909090] bg-[#fcfcfc]"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-[#f0f0f0] flex items-center justify-center">
-                      <PlaySquare size={24} />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[15px] font-black">Link New Account</p>
-                      <p className="text-[12px] font-medium mt-1">Connect another channel</p>
-                    </div>
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {activeTab === 'moderation' && (
-              <div className="space-y-6">
-                 <h1 className="text-2xl font-bold text-[#0f0f0f]">Moderation Queue</h1>
-                 <div className="yt-card !p-0 overflow-hidden">
-                    <ModerationQueue onAction={fetchAnalytics} searchQuery={searchQuery} />
-                 </div>
-              </div>
-            )}
-
-            {activeTab === 'settings' && (
-              <motion.div 
-                key="settings"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.02 }}
-                className="h-full"
-              >
-                <Settings />
-              </motion.div>
-            )}
+              }>
+                {renderActiveTab()}
+              </Suspense>
+            </motion.div>
           </AnimatePresence>
         </main>
       </div>

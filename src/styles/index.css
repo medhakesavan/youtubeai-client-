@@ -26,28 +26,24 @@
   --warning: #f9ab00;
   --warning-soft: #fff8e1;
   
-  --radius-card: 16px;
-  --radius-button: 12px;
-  --radius-input: 12px;
+  --radius-card: 32px;
+  --radius-button: 16px;
+  --radius-input: 16px;
   
-  --header-h: 64px;
-  --sidebar-w: 240px;
+  --header-h: 72px;
+  --sidebar-w: 280px;
   
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.02);
-  --shadow-hover: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02);
+  --shadow-card: 0 4px 12px rgba(0,0,0,0.03);
+  --shadow-hover: 0 20px 40px -12px rgba(0,0,0,0.1);
 }
 
 @layer base {
   body {
-    background-color: var(--bg-app);
+    background-color: #fafafa;
     color: var(--text-main);
-    font-family: 'Inter', -apple-system, sans-serif;
+    font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
-    width: 100%;
-    position: relative;
-    overscroll-behavior-y: none; /* Prevent pull-to-refresh if using a fixed app feel */
+    letter-spacing: -0.01em;
   }
 
   /* Responsive Typography */
@@ -254,4 +250,13 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
 }

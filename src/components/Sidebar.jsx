@@ -7,7 +7,9 @@ import {
   Settings,
   LogOut,
   Zap,
-  Youtube
+  UsersRound,
+  ChevronRight,
+  ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -16,13 +18,13 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout, isOpen, setIsOpen }) => {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'videos', label: 'Videos', icon: Video },
     { id: 'channels', label: 'Channels', icon: PlaySquare },
-    { id: 'moderation', label: 'Moderation', icon: ShieldCheck },
+    { id: 'leads', label: 'Leads', icon: UsersRound },
+    { id: 'moderation', label: 'Auto-Mod', icon: ShieldCheck },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   return (
     <>
-      {/* Mobile Backdrop */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
@@ -30,7 +32,7 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout, isOpen, setIsOpen }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsOpen(false)}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[110] lg:hidden"
+            className="fixed inset-0 bg-[#0f0f0f]/10 backdrop-blur-[2px] z-[110] lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -38,125 +40,102 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout, isOpen, setIsOpen }) => {
       <motion.aside 
         initial={false}
         animate={{ 
+          width: isOpen ? '280px' : '88px',
           x: (typeof window !== 'undefined' && window.innerWidth >= 1024) ? 0 : (isOpen ? 0 : -280),
-          opacity: 1
         }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className={`fixed inset-y-0 left-0 bg-white border-r border-[#f0f0f0] flex flex-col z-[150] shadow-2xl lg:shadow-none lg:relative transition-all duration-300 ease-in-out ${
-          !isOpen ? 'pointer-events-none lg:pointer-events-auto' : 'pointer-events-auto'
-        }`}
-        style={{
-          width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? (isOpen ? '240px' : '72px') : '280px'
-        }}
+        transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+        className="fixed inset-y-0 left-0 bg-white border-r border-[#f0f0f0] flex flex-col z-[150] lg:relative transition-all duration-300"
       >
-        {/* Sidebar Header (Mobile Only) */}
-        <div className="h-[64px] flex items-center px-6 border-b border-[#f0f0f0] lg:hidden">
-           <div className="flex items-center gap-3">
-              <div className="w-8 h-[18px] bg-[#ff0000] flex items-center justify-center rounded-[4px] relative">
-                <div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[7px] border-l-white border-b-[4px] border-b-transparent ml-0.5" />
-              </div>
-           </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 py-4 lg:py-6 overflow-y-auto no-scrollbar">
-          <div className="space-y-1">
-            {menuItems.map((item) => (
-              <div key={item.id} className="relative px-2">
+        {/* Navigation Section */}
+        <div className="flex-1 py-8 flex flex-col gap-2 overflow-y-auto no-scrollbar">
+          {menuItems.map((item) => {
+            const isMenuTabActive = activeTab === item.id;
+            return (
+              <div key={item.id} className="px-3 relative h-12">
                 <button
                   onClick={() => {
                     setActiveTab(item.id);
                     if (window.innerWidth < 1024) setIsOpen(false);
                   }}
-                  className={`sidebar-item group transition-all duration-200 w-full ${
-                    activeTab === item.id 
-                      ? 'bg-[#fff1f0] text-[#ff0000] font-bold' 
-                      : 'hover:bg-[#f9f9f9] text-[#606060]'
-                  } ${isOpen || (typeof window !== 'undefined' && window.innerWidth < 1024) ? 'px-4 justify-start' : 'px-0 h-12 justify-center rounded-xl'}`}
+                  className={`relative w-full h-full flex items-center gap-4 rounded-2xl transition-all duration-300 group ${
+                    isMenuTabActive 
+                      ? 'bg-[#0f0f0f] text-white shadow-lg shadow-black/10' 
+                      : 'hover:bg-[#f8f8f8] text-[#909090] hover:text-[#0f0f0f]'
+                  } ${isOpen ? 'px-4' : 'justify-center'}`}
                 >
-                  <div className="flex-shrink-0 flex items-center justify-center">
+                  <div className="flex-shrink-0">
                     <item.icon 
                       size={20} 
-                      strokeWidth={activeTab === item.id ? 2.5 : 2} 
-                      className={activeTab === item.id ? 'text-[#ff0000]' : ''}
+                      strokeWidth={isMenuTabActive ? 2.5 : 2} 
                     />
                   </div>
                   
-                  {(isOpen || (typeof window !== 'undefined' && window.innerWidth < 1024)) && (
+                  {isOpen && (
                     <motion.span 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="ml-4 whitespace-nowrap text-[14px]"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="text-[14px] font-black tracking-tight"
                     >
                       {item.label}
                     </motion.span>
                   )}
 
-                  {activeTab === item.id && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#ff0000] rounded-r-full" />
+                  {isMenuTabActive && isOpen && (
+                    <div className="ml-auto opacity-40">
+                      <ChevronRight size={14} />
+                    </div>
                   )}
 
-                  {/* Tooltip for Collapsed State (Desktop Only) */}
+                  {/* Tooltip for Collapsed State */}
                   {!isOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 && (
-                    <div className="absolute left-full ml-4 px-3 py-1.5 bg-[#282828] text-white text-[11px] font-bold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-[200] shadow-xl translate-x-2 group-hover:translate-x-0">
+                    <div className="absolute left-full ml-4 px-3 py-2 bg-[#0f0f0f] text-white text-[10px] font-black uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 whitespace-nowrap z-[200] shadow-2xl translate-x-3 group-hover:translate-x-0">
                       {item.label}
                     </div>
                   )}
                 </button>
+                {isMenuTabActive && !isOpen && (
+                   <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#ff0000] rounded-l-full" />
+                )}
               </div>
-            ))}
-          </div>
-        </nav>
+            );
+          })}
+        </div>
 
-        {/* Footer Section: AI Status & Logout */}
-        <div className={`p-2 lg:p-3 mt-auto border-t border-[#f0f0f0] transition-all duration-300 ${isOpen ? 'space-y-4' : 'space-y-2'}`}>
-          {/* AI Status Card */}
-          <div className={`bg-[#fcfcfc] border border-[#f0f0f0] rounded-2xl overflow-hidden transition-all duration-300 ${isOpen ? 'p-4' : 'p-0 h-12 flex items-center justify-center border-none bg-transparent'}`}>
-            <div className={`flex items-center ${isOpen ? 'gap-3 mb-2' : 'justify-center'}`}>
-              <div className={`rounded-xl bg-[#fff1f0] flex items-center justify-center text-[#ff0000] flex-shrink-0 ${isOpen ? 'w-8 h-8' : 'w-12 h-12'}`}>
-                <Zap size={isOpen ? 16 : 20} fill="currentColor" />
-              </div>
-              {isOpen && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  <p className="text-[11px] font-bold text-[#909090] uppercase tracking-wider leading-none">AI Status</p>
-                  <p className="text-[13px] font-bold text-[#0f0f0f] mt-1">Live</p>
-                </motion.div>
-              )}
-            </div>
-            {isOpen && (
-              <div className="w-full h-1 bg-[#f0f0f0] rounded-full overflow-hidden">
-                <div className="h-full bg-[#ff0000] w-[85%] animate-pulse"></div>
-              </div>
-            )}
+        {/* AI & Security Footer */}
+        <div className="p-4 mt-auto border-t border-[#f0f0f0] bg-[#fcfcfc] space-y-3">
+          <div className={`overflow-hidden transition-all duration-500 rounded-[24px] cursor-default bg-white border border-[#f0f0f0] hover:border-red-500/20 group/ai ${isOpen ? 'p-4' : 'p-0 h-14 flex items-center justify-center'}`}>
+             <div className={`flex items-center ${isOpen ? 'gap-3 mb-3' : 'justify-center'}`}>
+                <div className={`rounded-xl transition-all duration-500 flex items-center justify-center ${isOpen ? 'w-10 h-10 bg-red-50 text-red-600' : 'w-12 h-12 bg-white text-red-600 border border-red-50 group-hover/ai:border-red-500/20'}`}>
+                   <Zap size={isOpen ? 20 : 24} className="animate-pulse" fill="currentColor" />
+                </div>
+                {isOpen && (
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-[#909090] uppercase tracking-widest leading-none mb-1">AI Guardian</p>
+                    <p className="text-[14px] font-black text-[#0f0f0f] truncate">Online</p>
+                  </div>
+                )}
+             </div>
+             {isOpen && (
+                <div className="w-full h-1 bg-[#f0f0f0] rounded-full overflow-hidden">
+                   <motion.div 
+                    initial={{ x: '-100%' }}
+                    animate={{ x: '0%' }}
+                    transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                    className="h-full bg-red-600 w-1/2 shadow-[0_0_10px_#ff0000]"
+                   />
+                </div>
+             )}
           </div>
 
-          <div className="px-2">
+          <div className="px-1">
             <button 
               onClick={onLogout}
-              className={`sidebar-item group !text-[#d93025] hover:!bg-[#fce8e6] transition-all duration-200 !mx-0 ${
-                isOpen ? 'w-full px-4' : 'h-12 w-full px-0 justify-center rounded-xl'
+              className={`flex items-center transition-all duration-300 rounded-[20px] ${
+                isOpen ? 'w-full px-4 py-3 bg-[#fce8e6]/30 text-[#d93025] hover:bg-[#fce8e6] font-black text-xs uppercase tracking-widest' : 'h-14 w-full justify-center text-[#909090] hover:text-[#d93025] hover:bg-[#fce8e6]'
               }`}
             >
-              <div className="flex-shrink-0 flex items-center justify-center">
-                <LogOut size={20} className="group-hover:rotate-12 transition-transform" />
-              </div>
-              {isOpen && (
-                <motion.span 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="ml-4 font-bold"
-                >
-                  Logout
-                </motion.span>
-              )}
-              {!isOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 && (
-                <div className="absolute left-full ml-4 px-3 py-1.5 bg-[#282828] text-white text-[11px] font-bold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 whitespace-nowrap z-[200] shadow-xl translate-x-2 group-hover:translate-x-0">
-                  Logout
-                </div>
-              )}
+              <LogOut size={20} />
+              {isOpen && <span className="ml-3">Logout</span>}
             </button>
           </div>
         </div>

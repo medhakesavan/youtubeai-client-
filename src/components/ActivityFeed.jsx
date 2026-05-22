@@ -10,74 +10,73 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getSentimentConfig } from '../constants/sentimentColors';
+import { getSentimentConfig } from '../utils/constants/sentimentColors.js';
 
 const ActivityFeed = ({ activities }) => {
   return (
-    <div className="w-[320px] bg-[#1e1e1e] border-l border-[#2a2a2a] flex flex-col hidden 2xl:flex shadow-[-10px_0_30px_rgba(0,0,0,0.3)]">
-      <div className="p-6 border-b border-[#2a2a2a] flex items-center justify-between">
-        <h3 className="font-bold text-sm uppercase tracking-widest text-[#aaaaaa]">Live Activity</h3>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
-          <span className="text-[10px] font-black text-red-600 uppercase tracking-tighter">Live</span>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-        <AnimatePresence initial={false}>
-          {activities.map((activity) => (
-            <motion.div
-              key={activity.id}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-[#2a2a2a] p-4 rounded-2xl border border-white/5 relative group hover:border-white/10 transition-all"
-            >
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-white/5" style={{ 
-                  color: getSentimentConfig(activity.status === 'deleted' ? 'toxic' : (activity.autoLiked ? 'positive' : 'neutral')).color 
-                }}>
-                  {activity.status === 'deleted' ? <Trash2 size={16} /> : 
-                   activity.autoLiked ? <Zap size={16} /> : <MessageSquare size={16} />}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-white mb-1">
-                    {activity.status === 'deleted' ? 'Comment Deleted' : 
-                     activity.autoLiked ? 'Comment Auto-Liked' : 'New Comment Detected'}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-[11px] text-[#aaaaaa] line-clamp-2 italic leading-tight flex-1">
+    <div className="w-full flex flex-col min-h-[300px]">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 no-scrollbar">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <AnimatePresence initial={false}>
+            {activities.map((activity) => (
+              <motion.div
+                key={activity.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-[#f8f9fa] p-4 rounded-[20px] border border-[#f0f0f0] relative group hover:border-[#ff0000]/20 hover:bg-white hover:shadow-md transition-all duration-300"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-xl bg-white shadow-sm border border-[#f0f0f0]" style={{ 
+                    color: getSentimentConfig(activity.status === 'deleted' ? 'toxic' : (activity.autoLiked ? 'positive' : 'neutral')).color 
+                  }}>
+                    {activity.status === 'deleted' ? <Trash2 size={18} /> : 
+                     activity.autoLiked ? <Zap size={18} /> : <MessageSquare size={18} />}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[13px] font-black text-[#0f0f0f] truncate">
+                        {activity.status === 'deleted' ? 'Comment Deleted' : 
+                         activity.autoLiked ? 'Auto-Liked' : 'New Comment'}
+                      </p>
+                      {activity.language && (
+                        <span className="text-[9px] font-black uppercase text-[#909090] bg-[#f0f0f0] px-1.5 py-0.5 rounded">
+                          {activity.language}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <p className="text-[12px] text-[#606060] line-clamp-2 italic leading-relaxed mb-3">
                       "{activity.text}"
                     </p>
-                    {activity.language && (
-                      <span className="text-[8px] font-black uppercase bg-white/5 text-white/40 px-1 py-0.5 rounded border border-white/5">
-                        {activity.language}
+
+                    <div className="flex items-center justify-between pt-3 border-t border-[#f0f0f0]/50">
+                      <span className="text-[10px] font-bold text-[#909090] flex items-center gap-1">
+                        <Clock size={10} /> Just now
                       </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-[10px] font-bold text-[#666] flex items-center gap-1">
-                      <Clock size={10} /> Just now
-                    </span>
-                    <span className="text-[10px] font-black text-white/40 uppercase tracking-tighter">@{activity.author}</span>
+                      <span className="text-[10px] font-black text-[#ff0000] uppercase tracking-tighter">@{activity.author}</span>
+                    </div>
                   </div>
                 </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+        
+        {activities.length === 0 && (
+           <div className="h-64 flex flex-col items-center justify-center text-center p-8 opacity-40">
+              <div className="p-5 bg-[#f8f9fa] rounded-full mb-4">
+                <ShieldAlert size={40} className="text-[#909090]" />
               </div>
-            </motion.div>
-          ))}
-          {activities.length === 0 && (
-             <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-20">
-                <ShieldAlert size={48} className="mb-4" />
-                <p className="text-sm font-bold uppercase tracking-widest">Awaiting activity...</p>
-             </div>
-          )}
-        </AnimatePresence>
+              <p className="text-sm font-bold uppercase tracking-widest text-[#909090]">Awaiting Live Feedback...</p>
+           </div>
+        )}
       </div>
 
-      <div className="p-4 bg-[#2a2a2a]/50 border-t border-[#2a2a2a]">
+      <div className="p-4 bg-[#f8f9fa]/50 border-t border-[#f0f0f0] flex justify-end">
         <button 
           onClick={() => alert('Feed paused. Real-time updates are temporarily suspended.')}
-          className="w-full py-2.5 bg-red-600/10 hover:bg-red-600/20 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+          className="px-6 py-2 bg-white border border-[#e5e5e5] hover:border-[#ff0000]/30 hover:text-[#ff0000] text-[#606060] rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
         >
           Pause Feed
         </button>

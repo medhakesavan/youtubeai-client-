@@ -21,6 +21,9 @@ const Login = ({ onSwitchToRegister }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Detect if we're inside an embedded iframe (switch account mode)
+  const isEmbedded = new URLSearchParams(window.location.search).get('embed') === 'true';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (email && password) {
@@ -47,6 +50,20 @@ const Login = ({ onSwitchToRegister }) => {
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-[420px] z-10"
       >
+        {/* Embedded switch-account banner */}
+        {isEmbedded && (
+          <div className="mb-4 flex items-center gap-2.5 bg-[#065fd4]/8 border border-[#065fd4]/20 rounded-xl px-4 py-3">
+            <div className="w-7 h-7 rounded-full bg-[#065fd4]/10 flex items-center justify-center flex-shrink-0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#065fd4" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3" />
+              </svg>
+            </div>
+            <p className="text-[11px] font-bold text-[#065fd4] leading-snug">
+              Sign in to a different YouTube account to view its comments.
+            </p>
+          </div>
+        )}
+
         <div className="bg-white/80 backdrop-blur-xl border border-white rounded-[24px] p-8 sm:p-10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.08)] relative">
           {/* Top Logo Container */}
           <div className="flex flex-col items-center text-center mb-8">

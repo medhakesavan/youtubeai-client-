@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
-import api from '../api';
+import api from '../services/api';
 
 export const AuthContext = createContext();
 
@@ -13,7 +13,24 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = useCallback(async () => {
     try {
       setAuthLoading(true);
-      const res = await api.get('/api/auth/me');
+
+      const queryParams = new URLSearchParams(window.location.search);
+      const sso_username = queryParams.get('sso_username');
+      const sso_key = queryParams.get('sso_key');
+
+      if (sso_username && sso_key) {
+        try {
+          const res = await api.post('/auth/sso', { sso_username, sso_key });
+          setUser(res.data.user);
+          setIsAuthenticated(true);
+          setAuthLoading(false);
+          return;
+        } catch (ssoError) {
+          console.error('SSO auto-login failed, falling back:', ssoError);
+        }
+      }
+
+      const res = await api.get('/auth/me');
       setUser(res.data);
       setIsAuthenticated(true);
     } catch (error) {
@@ -29,20 +46,20 @@ export const AuthProvider = ({ children }) => {
   }, [checkAuth]);
 
   const login = async (email, password) => {
-    const res = await api.post('/api/auth/login', { email, password });
+    const res = await api.post('/auth/login', { email, password });
     setUser(res.data.user);
     setIsAuthenticated(true);
     return res.data;
   };
 
   const register = async (name, email, password) => {
-    const res = await api.post('/api/auth/register', { name, email, password });
+    const res = await api.post('/auth/register', { name, email, password });
     return res.data;
   };
 
   const logout = async () => {
     try {
-      await api.post('/api/auth/logout');
+      await api.post('/auth/logout');
     } catch (err) {
       console.error('Logout error:', err);
     } finally {

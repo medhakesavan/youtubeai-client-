@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+export const API_BASE_URL = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
+
 const api = axios.create({
-  baseURL: apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase,
+  baseURL: `${API_BASE_URL}/api`,
   withCredentials: true,
   timeout: 10000,
   headers: {
