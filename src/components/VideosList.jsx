@@ -66,7 +66,7 @@ const VideosList = ({
     try {
       setSelectedVideo(videoId);
       setLoadingComments(true);
-      const res = await api.get(`/comments/${videoId}`, { params: { channelId } });
+      const res = await api.get('/comments', { params: { videoId } });
       setComments(res.data);
     } catch (err) {
       console.error('Error fetching comments:', err);
@@ -120,7 +120,7 @@ const VideosList = ({
     if (!selectedVideo) return;
     try {
       setLoadingComments(true);
-      await api.get(`/youtube/comments/analyze/${selectedVideo}`, { params: { channelId } });
+      await api.get(`/comments/analyze/${selectedVideo}`, { params: { channelId } });
       handleVideoSelect(selectedVideo);
     } catch (err) {
       console.error('Audit failed:', err);
