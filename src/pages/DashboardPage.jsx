@@ -102,7 +102,7 @@ const DashboardPage = ({
             </div>
           </div>
           
-          <div className="h-[250px] relative w-full">
+          <div className="h-[300px] min-h-[300px] relative w-full flex items-center justify-center">
             <ResponsiveContainer width="99%" height="100%">
               <PieChart>
                 <Pie

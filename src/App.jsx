@@ -82,8 +82,21 @@ const App = () => {
         transports: ['websocket', 'polling'],
         reconnectionAttempts: 5,
         reconnectionDelay: 2000,
+        auth: {
+          token: localStorage.getItem('token')
+        }
+      });
+
+      console.log('🔌 Connecting to WebSocket...');
+      
+      socket.on('connect', () => {
+        console.log('✅ WebSocket Connected');
       });
       
+      socket.on('connect_error', (err) => {
+        console.error('❌ WebSocket Connection Error:', err.message);
+      });
+
       socket.on('live_activity', (activity) => {
         setActivities(prev => {
           if (prev.find(a => (a._id || a.id) === (activity._id || activity.id))) return prev;
