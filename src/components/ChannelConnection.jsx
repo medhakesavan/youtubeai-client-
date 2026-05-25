@@ -25,7 +25,8 @@ const ChannelConnection = ({ channels, setChannels }) => {
   const [success, setSuccess] = useState('');
 
   const handleOAuthConnect = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/youtube/auth`;
+    const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    window.location.href = `${apiBase}/api/youtube/auth`;
   };
 
   const handleApiKeyConnect = async (e) => {
