@@ -1,17 +1,28 @@
 import axios from 'axios';
 
-const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-const rawBase = import.meta.env.VITE_API_URL || (isProduction ? '' : 'http://localhost:5000');
+// RUNTIME Dynamic Base URL detection
+const getBaseURL = () => {
+  // 1. Check if we have an explicit ENV variable (highest priority)
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  
+  // 2. Check if we are running on Vercel (production)
+  const isProd = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+  
+  if (isProd) {
+    // On Vercel, if VITE_API_URL is missing, we MUST have a relative path or error
+    console.warn('⚠️ VITE_API_URL is missing. Attempting relative API path...');
+    return window.location.origin; // Try to call the same domain
+  }
+  
+  // 3. Fallback for Local Development
+  return 'http://localhost:5000';
+};
 
-if (isProduction && !import.meta.env.VITE_API_URL) {
-  console.error('❌ PRODUCTION ERROR: VITE_API_URL is missing in Vercel environment variables!');
-}
-
-export const API_BASE_URL = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
+export const API_BASE_URL = getBaseURL().endsWith('/') ? getBaseURL().slice(0, -1) : getBaseURL();
 
 const api = axios.create({
   baseURL: `${API_BASE_URL}/api`,
-  timeout: 10000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,9 +34,6 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log(`📡 [API Request] ${config.method.toUpperCase()} ${config.url} - Token Attached`);
-    } else if (!config.url.includes('/auth/login') && !config.url.includes('/auth/register')) {
-      console.warn(`📡 [API Request] ${config.method.toUpperCase()} ${config.url} - NO TOKEN FOUND`);
     }
     return config;
   },
@@ -37,7 +45,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Logic for status handling is also in AuthContext
+       localStorage.removeItem('token');
     }
     return Promise.reject(error);
   }
