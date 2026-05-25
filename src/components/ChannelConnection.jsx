@@ -25,7 +25,14 @@ const ChannelConnection = ({ channels, setChannels }) => {
   const [success, setSuccess] = useState('');
 
   const handleOAuthConnect = () => {
-    const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    const isProd = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    const apiBase = import.meta.env.VITE_API_URL?.replace('/api', '') || (isProd ? window.location.origin : 'http://localhost:5000');
+    
+    if (isProd && !import.meta.env.VITE_API_URL) {
+      alert("⚠️ Production Configuration Error: The backend URL is not set in Vercel. Please follow the deployment instructions provided by the AI.");
+      return;
+    }
+    
     window.location.href = `${apiBase}/api/youtube/auth`;
   };
 
