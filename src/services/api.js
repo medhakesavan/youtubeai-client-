@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const rawBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+const rawBase = import.meta.env.VITE_API_URL || (isProduction ? '' : 'http://localhost:5000');
+
+if (isProduction && !import.meta.env.VITE_API_URL) {
+  console.error('❌ PRODUCTION ERROR: VITE_API_URL is missing in Vercel environment variables!');
+}
+
 export const API_BASE_URL = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
 
 const api = axios.create({
