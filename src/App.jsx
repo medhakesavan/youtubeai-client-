@@ -48,6 +48,12 @@ const App = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
     const queryParams = new URLSearchParams(window.location.search);
+    if (queryParams.get('status') === 'success') {
+      // Small alert to confirm success
+      setTimeout(() => alert('✅ YouTube Channel Connected Successfully!'), 500);
+      // Clean up the URL to avoid repeated alerts on refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     return queryParams.get('redirect') === 'comments' ? 'videos' : 'dashboard';
   });
   const [isEmbedded] = useState(() => {
